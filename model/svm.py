@@ -1,82 +1,87 @@
 import numpy as np
 
 
-class SVM:
-    def __init__(self, C=10, features=2, sigma_sq=0.1, kernel="None"):
-        self.C = C
-        self.features = features
-        self.sigma_sq = sigma_sq
+class SoftMarginSVM:
+    def __init__(self,
+                 learning_rate=0.01,
+                 lambda_param=0.01,
+                 num_iterations=1000,
+                 kernel='linear',
+                 degree=3,
+                 gamma=0.1,
+                 ):
+        self.lr = learning_rate
+        self.lambda_param = lambda_param
+        self.num_iterations = num_iterations
         self.kernel = kernel
-        self.weights = np.zeros(features)
-        self.bias = 0.
+        self.weights = None
+        self.bias = None
+        self.degree = degree
+        self.gamma = gamma
 
-    def __similarity(self, x, l):
-        return np.exp(-sum((x - l) ** 2) / (2 * self.sigma_sq))
+    def fit(self, X, y):
+        n_samples, n_features = X.shape
 
-    def gaussian_kernel(self, x1, x):
-        m = x.shape[0]
-        n = x1.shape[0]
-        op = [[self.__similarity(x1[x_index], x[l_index]) for l_index in range(m)] for x_index in range(n)]
-        return np.array(op)
+        # Initialize the weights and bias
+        self.weights = np.zeros(n_features)
+        self.bias = 0
 
-    def loss_function(self, y, y_hat):
-        sum_terms = 1 - y * y_hat
-        sum_terms = np.where(sum_terms < 0, 0, sum_terms)
-        return self.C * np.sum(sum_terms) / len(y) + sum(self.weights ** 2) / 2
+        # Apply gradient descent
+        for _ in range(self.num_iterations):
+            if self.kernel == 'linear':
+                scores = self.linear_function(X)
+            else:
+                scores = self.nonlinear_function(X)
 
-    def fit(self, x_train, y_train, epochs=1000, print_every_nth_epoch=100, learning_rate=0.01):
-        y = y_train.copy()
-        x = x_train.copy()
-        self.initial = x.copy()
+            # Calculate hinge loss
+            loss = self.hinge_loss(scores, y)
 
-        assert x.shape[0] == y.shape[0], "Samples of x and y don't match."
-        assert x.shape[1] == self.features, "Number of Features don't match"
+            # Calculate gradients
+            dw, db = self.calculate_gradients(X, y, loss)
 
-        if self.kernel == "gaussian":
-            x = self.gaussian_kernel(x, x)
-            m = x.shape[0]
-            self.weights = np.zeros(m)
+            # Update weights and bias
+            self.weights -= self.lr * dw
+            self.bias -= self.lr * db
 
-        n = x.shape[0]
+    def linear_function(self, X):
+        return np.dot(X, self.weights) + self.bias
 
-        for epoch in range(epochs):
-            y_hat = np.dot(x, self.weights) + self.bias
-            grad_weights = (-self.C * np.multiply(y, x.T).T + self.weights).T
+    def nonlinear_function(self, X):
+        if self.kernel == 'poly':
+            return (np.dot(X, self.weights) + self.bias) ** self.degree  # Polynomial kernel of degree 3
+        elif self.kernel == 'rbf':
+            gamma = 0.1  # Radial basis function (RBF) kernel parameter
+            return np.exp(-gamma * np.linalg.norm(X - self.weights, axis=1) ** 2)  # RBF kernel
+        elif self.kernel == 'sigmoid':
+            gamma = 0.1
+            return np.tanh(gamma * np.dot(X, self.weights) + self.bias)
+        else:
+            raise Exception(f"Not support kernel {self.kernel}")
 
-            for weight in range(self.weights.shape[0]):
-                grad_weights[weight] = np.where(1 - y_hat <= 0, self.weights[weight], grad_weights[weight])
+    def hinge_loss(self, scores, y):
+        return np.maximum(0, 1 - y * scores)
 
-            grad_weights = np.sum(grad_weights, axis=1)
-            self.weights -= learning_rate * grad_weights / n
-            grad_bias = -y * self.bias
-            grad_bias = np.where(1 - y_hat <= 0, 0, grad_bias)
-            grad_bias = sum(grad_bias)
-            self.bias -= grad_bias * learning_rate / n
-            if (epoch + 1) % print_every_nth_epoch == 0:
-                print("--------------- Epoch {} --> Loss = {} ---------------".format(epoch + 1,
-                                                                                      self.loss_function(y, y_hat)))
+    def calculate_gradients(self, X, y, loss):
+        mask = loss > 0
+        dw = self.lambda_param * self.weights - np.dot(X.T, y * mask)  # Gradient for weights
+        db = -np.sum(y * mask)  # Gradient for bias
+        return dw, db
 
-    def evaluate(self, x, y):
-        pred = self.predict(x)
-        pred = np.where(pred == -1, 0, 1)
-        diff = np.abs(np.where(y == -1, 0, 1) - pred)
-        return (len(diff) - sum(diff)) / len(diff)
-
-    def predict(self, x):
-        if self.kernel == "gaussian":
-            x = self.gaussian_kernel(x, self.initial)
-        return np.where(np.dot(x, self.weights) + self.bias > 0, 1, -1)
+    def predict(self, X):
+        if self.kernel == 'linear':
+            scores = self.linear_function(X)
+        else:
+            scores = self.nonlinear_function(X)
+        return np.sign(scores)
 
 
-x = np.array([[1, 2, 3], [2, 3, 3], [3, 1, 4], [6, 7, 4], [7, 5, 4], [8, 6, 4]])
-y = np.array([-1, -1, -1, 1, 1, 1])
+if __name__ == "__main__":
+    X_train = np.array([[1, 2, 3], [2, 1, 4], [2, 3, 5], [3, 2, 6]])
+    y_train = np.array([-1, -1, 1, 1])
 
-model = SVM(C=10, kernel="gaussian", sigma_sq=0.01, features=3)
-model.fit(x, y, epochs=20, print_every_nth_epoch=2, learning_rate=0.01)
+    svm = SoftMarginSVM(learning_rate=0.001, lambda_param=0.001, num_iterations=5000, kernel='poly')
+    svm.fit(X_train, y_train)
 
-x_test = np.array([[4, 3, 2], [5, 5, 4], [1, 2, 3]])
-
-p = model.predict(x)
-print(p)
-p = model.predict(x_test)
-print(p)
+    X_test = np.array([[1, 2, 3], [4, 0, 3], [3, 3, 5]])
+    y_test = svm.predict(X_train)
+    print(y_test)
