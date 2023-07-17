@@ -1,5 +1,5 @@
 import numpy as np
-
+from tqdm import tqdm
 
 class Perceptron:
     def __init__(self, input_size):
@@ -13,8 +13,8 @@ class Perceptron:
         z = np.dot(inputs, self.weights) + self.bias
         return self.sigmoid(z)
 
-    def train(self, inputs, targets, learning_rate=0.01, epochs=1000):
-        for epoch in range(epochs):
+    def fit(self, inputs, targets, learning_rate=0.01, epochs=1000):
+        for epoch in tqdm(range(epochs)):
             for x, y in zip(inputs, targets):
                 predicted = self.predict(x)
                 error = y - predicted
@@ -30,21 +30,23 @@ class Perceptron:
         accuracy = correct_predictions / len(targets)
         return accuracy
 
-# Sample training data and targets
-inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-targets = np.array([0, 1, 1, 1])
 
-# Create a Perceptron instance with input_size = 2 (since we have two features)
-perceptron = Perceptron(input_size=2)
+if __name__ == "__main__":
+    # Sample training data and targets
+    inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    targets = np.array([0, 1, 1, 1])
 
-# Train the perceptron on the sample data
-perceptron.train(inputs, targets, learning_rate=0.1, epochs=10000)
+    # Create a Perceptron instance with input_size = 2 (since we have two features)
+    perceptron = Perceptron(input_size=2)
 
-# Evaluate the perceptron on the same data
-accuracy = perceptron.evaluate(inputs, targets)
-print("Accuracy:", accuracy)
+    # Train the perceptron on the sample data
+    perceptron.fit(inputs, targets, learning_rate=0.1, epochs=10000)
 
-# Make predictions
-new_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-predictions = [perceptron.predict(x) for x in new_data]
-print("Predictions:", predictions)
+    # Evaluate the perceptron on the same data
+    accuracy = perceptron.evaluate(inputs, targets)
+    print("Accuracy:", accuracy)
+
+    # Make predictions
+    new_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    predictions = [perceptron.predict(x) for x in new_data]
+    print("Predictions:", predictions)
