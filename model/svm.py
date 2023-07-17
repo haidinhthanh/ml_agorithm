@@ -50,11 +50,9 @@ class SoftMarginSVM:
         if self.kernel == 'poly':
             return (np.dot(X, self.weights) + self.bias) ** self.degree  # Polynomial kernel of degree 3
         elif self.kernel == 'rbf':
-            gamma = 0.1  # Radial basis function (RBF) kernel parameter
-            return np.exp(-gamma * np.linalg.norm(X - self.weights, axis=1) ** 2)  # RBF kernel
+            return np.exp(-self.gamma * np.linalg.norm(X - self.weights, axis=1) ** 2)  # RBF kernel
         elif self.kernel == 'sigmoid':
-            gamma = 0.1
-            return np.tanh(gamma * np.dot(X, self.weights) + self.bias)
+            return np.tanh(self.gamma * np.dot(X, self.weights) + self.bias)
         else:
             raise Exception(f"Not support kernel {self.kernel}")
 
@@ -83,5 +81,5 @@ if __name__ == "__main__":
     svm.fit(X_train, y_train)
 
     X_test = np.array([[1, 2, 3], [4, 0, 3], [3, 3, 5]])
-    y_test = svm.predict(X_train)
+    y_test = svm.predict(X_test)
     print(y_test)

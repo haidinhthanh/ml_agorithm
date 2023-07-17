@@ -2,63 +2,49 @@ import numpy as np
 
 
 class Perceptron:
-    def __init__(self, learning_rate=0.01, num_iterations=1000):
-        self.learning_rate = learning_rate
-        self.num_iterations = num_iterations
-        self.weights = None
-        self.bias = None
+    def __init__(self, input_size):
+        self.weights = np.random.rand(input_size)
+        self.bias = np.random.rand()
 
-    def train(self, X, y):
-        num_samples, num_features = X.shape
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
 
-        # Initialize weights and bias
-        self.weights = np.zeros(num_features)
-        self.bias = 0
+    def predict(self, inputs):
+        z = np.dot(inputs, self.weights) + self.bias
+        return self.sigmoid(z)
 
-        for _ in range(self.num_iterations):
-            for i in range(num_samples):
-                # Compute activation
-                activation = np.dot(self.weights, X[i]) + self.bias
+    def train(self, inputs, targets, learning_rate=0.01, epochs=1000):
+        for epoch in range(epochs):
+            for x, y in zip(inputs, targets):
+                predicted = self.predict(x)
+                error = y - predicted
+                self.weights += learning_rate * error * predicted * (1 - predicted) * x
+                self.bias += learning_rate * error * predicted * (1 - predicted)
 
-                # Apply step function
-                if activation >= 0:
-                    y_hat = 1
-                else:
-                    y_hat = 0
+    def evaluate(self, inputs, targets):
+        correct_predictions = 0
+        for x, y in zip(inputs, targets):
+            predicted = 1 if self.predict(x) >= 0.5 else 0
+            if predicted == y:
+                correct_predictions += 1
+        accuracy = correct_predictions / len(targets)
+        return accuracy
 
-                # Update weights and bias
-                self.weights += self.learning_rate * (y[i] - y_hat) * X[i]
-                self.bias += self.learning_rate * (y[i] - y_hat)
+# Sample training data and targets
+inputs = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+targets = np.array([0, 1, 1, 1])
 
-    def predict(self, X):
-        num_samples = X.shape[0]
-        predictions = np.zeros(num_samples)
+# Create a Perceptron instance with input_size = 2 (since we have two features)
+perceptron = Perceptron(input_size=2)
 
-        for i in range(num_samples):
-            # Compute activation
-            activation = np.dot(self.weights, X[i]) + self.bias
+# Train the perceptron on the sample data
+perceptron.train(inputs, targets, learning_rate=0.1, epochs=10000)
 
-            # Apply step function
-            if activation >= 0:
-                predictions[i] = 1
-            else:
-                predictions[i] = 0
-
-        return predictions
-
-
-# Example usage
-X = np.array([[2, 3], [1, 1], [5, 2], [3, 1]])
-y = np.array([1, 0, 1, 0])
-
-# Create a Perceptron instance
-perceptron = Perceptron(learning_rate=0.1, num_iterations=100)
-
-# Train the model
-perceptron.train(X, y)
+# Evaluate the perceptron on the same data
+accuracy = perceptron.evaluate(inputs, targets)
+print("Accuracy:", accuracy)
 
 # Make predictions
-test_samples = np.array([[4, 3], [1, 2]])
-predictions = perceptron.predict(test_samples)
-
-print(predictions)  # Output: [1, 0]
+new_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+predictions = [perceptron.predict(x) for x in new_data]
+print("Predictions:", predictions)
