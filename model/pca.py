@@ -10,7 +10,7 @@ def center_data(data):
 def calculate_covariance_matrix(centered_data):
     # Calculate the covariance matrix
     num_samples = centered_data.shape[0]
-    covariance_matrix = np.dot(centered_data.T, centered_data) / (num_samples - 1)
+    covariance_matrix = np.dot(centered_data.T, centered_data) / num_samples
     return covariance_matrix
 
 
